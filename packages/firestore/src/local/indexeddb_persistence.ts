@@ -19,7 +19,12 @@ import { User } from '../auth/user';
 import { DatabaseInfo } from '../core/database_info';
 import { PersistenceSettings } from '../core/firestore_client';
 import { ListenSequence, SequenceNumberSyncer } from '../core/listen_sequence';
-import { ListenSequenceNumber, TargetId } from '../core/types';
+import {
+  ListenSequenceNumber,
+  OnlineState,
+  OnlineStateSource,
+  TargetId
+} from '../core/types';
 import { DocumentKey } from '../model/document_key';
 import { Platform, PlatformSupport } from '../platform/platform';
 import { JsonProtoSerializer } from '../remote/serializer';
@@ -81,6 +86,9 @@ import {
 } from './shared_client_state';
 import { TargetData } from './target_data';
 import { SimpleDb, SimpleDbStore, SimpleDbTransaction } from './simple_db';
+import { LocalStore } from './local_store';
+import { RemoteStore } from '../remote/remote_store';
+import { MultiTabSyncEngine, SyncEngine } from '../core/sync_engine';
 
 const LOG_TAG = 'IndexedDbPersistence';
 
@@ -1367,11 +1375,6 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
     return this.persistence;
   }
 
-  getSharedClientState(): SharedClientState {
-    assert(!!this.sharedClientState, 'initialize() not called');
-    return this.sharedClientState;
-  }
-
   getGarbageCollectionScheduler(): GarbageCollectionScheduler {
     assert(!!this.gcScheduler, 'initialize() not called');
     return this.gcScheduler;
@@ -1382,5 +1385,42 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
       databaseInfo
     );
     return IndexedDbPersistence.clearPersistence(persistenceKey);
+  }
+
+  async getSyncEngine(
+    localStore: LocalStore,
+    remoteStore: RemoteStore,
+    currentUser: User
+  ): Promise<SyncEngine> {
+    const syncEngine = new MultiTabSyncEngine(
+      localStore,
+      remoteStore,
+      this.sharedClientState!,
+      currentUser
+    );
+
+    // NOTE: This will immediately call the listener, so we make sure to
+    // set it after localStore / remoteStore are started.
+    await this.persistence!.setPrimaryStateListener(async isPrimary => {
+      await syncEngine.applyPrimaryState(isPrimary);
+      if (isPrimary && !this.gcScheduler!.started) {
+        this.gcScheduler!.start(localStore);
+      } else if (!isPrimary) {
+        this.gcScheduler!.stop();
+      }
+    });
+
+    const sharedClientStateOnlineStateChangedHandler = (
+      onlineState: OnlineState
+    ): void =>
+      syncEngine.applyOnlineStateChange(
+        onlineState,
+        OnlineStateSource.SharedClientState
+      );
+
+    this.sharedClientState!.onlineStateHandler = sharedClientStateOnlineStateChangedHandler;
+
+    await this.sharedClientState!.start();
+    return syncEngine;
   }
 }

@@ -26,7 +26,7 @@ import {
 } from '../../../src/core/event_manager';
 import { Query } from '../../../src/core/query';
 import { SnapshotVersion } from '../../../src/core/snapshot_version';
-import { SyncEngine } from '../../../src/core/sync_engine';
+import { MultiTabSyncEngine } from '../../../src/core/sync_engine';
 import {
   OnlineState,
   OnlineStateSource,
@@ -395,7 +395,7 @@ abstract class TestRunner {
   // Initialized asynchronously via start().
   private connection!: MockConnection;
   private eventManager!: EventManager;
-  private syncEngine!: SyncEngine;
+  private syncEngine!: MultiTabSyncEngine;
 
   private eventList: QueryEvent[] = [];
   private acknowledgedDocs: string[];
@@ -506,7 +506,7 @@ abstract class TestRunner {
       remoteStoreOnlineStateChangedHandler,
       connectivityMonitor
     );
-    this.syncEngine = new SyncEngine(
+    this.syncEngine = new MultiTabSyncEngine(
       this.localStore,
       this.remoteStore,
       this.sharedClientState,

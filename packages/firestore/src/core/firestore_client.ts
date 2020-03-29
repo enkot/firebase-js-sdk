@@ -44,7 +44,6 @@ import {
 import { SyncEngine } from './sync_engine';
 import { View } from './view';
 
-import { SharedClientState } from '../local/shared_client_state';
 import { AutoId } from '../util/misc';
 import { DatabaseId, DatabaseInfo } from './database_info';
 import { Query } from './query';
@@ -87,9 +86,6 @@ export class FirestoreClient {
   private remoteStore!: RemoteStore;
   private syncEngine!: SyncEngine;
   private gcScheduler!: GarbageCollectionScheduler;
-
-  // PORTING NOTE: SharedClientState is only used for multi-tab web.
-  private sharedClientState!: SharedClientState;
 
   private readonly clientId = AutoId.newId();
 
@@ -178,7 +174,7 @@ export class FirestoreClient {
           user,
           persistenceResult
         )
-          .then(() => this.initializeRest(user))
+          .then(() => this.initializeRest(persistenceProvider, user))
           .then(initializationDone.resolve, initializationDone.reject);
       } else {
         this.asyncQueue.enqueueAndForget(() => {
@@ -244,7 +240,6 @@ export class FirestoreClient {
 
       this.persistence = persistenceProvider.getPersistence();
       this.gcScheduler = persistenceProvider.getGarbageCollectionScheduler();
-      this.sharedClientState = persistenceProvider.getSharedClientState();
       persistenceResult.resolve();
     } catch (error) {
       // Regardless of whether or not the retry succeeds, from an user
@@ -323,7 +318,10 @@ export class FirestoreClient {
    * has been obtained from the credential provider and some persistence
    * implementation is available in this.persistence.
    */
-  private initializeRest(user: User): Promise<void> {
+  private initializeRest(
+    persistenceProvider: PersistenceProvider,
+    user: User
+  ): Promise<void> {
     logDebug(LOG_TAG, 'Initializing. user=', user.uid);
     return this.platform
       .loadConnection(this.databaseInfo)
@@ -349,13 +347,6 @@ export class FirestoreClient {
             onlineState,
             OnlineStateSource.RemoteStore
           );
-        const sharedClientStateOnlineStateChangedHandler = (
-          onlineState: OnlineState
-        ): void =>
-          this.syncEngine.applyOnlineStateChange(
-            onlineState,
-            OnlineStateSource.SharedClientState
-          );
 
         this.remoteStore = new RemoteStore(
           this.localStore,
@@ -365,35 +356,17 @@ export class FirestoreClient {
           connectivityMonitor
         );
 
-        this.syncEngine = new SyncEngine(
+        this.syncEngine = await persistenceProvider.getSyncEngine(
           this.localStore,
           this.remoteStore,
-          this.sharedClientState,
           user
         );
 
-        this.sharedClientState.onlineStateHandler = sharedClientStateOnlineStateChangedHandler;
-
         // Set up wiring between sync engine and other components
         this.remoteStore.syncEngine = this.syncEngine;
-        this.sharedClientState.syncEngine = this.syncEngine;
-
         this.eventMgr = new EventManager(this.syncEngine);
 
-        // PORTING NOTE: LocalStore doesn't need an explicit start() on the Web.
-        await this.sharedClientState.start();
         await this.remoteStore.start();
-
-        // NOTE: This will immediately call the listener, so we make sure to
-        // set it after localStore / remoteStore are started.
-        await this.persistence.setPrimaryStateListener(async isPrimary => {
-          await this.syncEngine.applyPrimaryState(isPrimary);
-          if (isPrimary && !this.gcScheduler.started) {
-            this.gcScheduler.start(this.localStore);
-          } else if (!isPrimary) {
-            this.gcScheduler.stop();
-          }
-        });
 
         // When a user calls clearPersistence() in one client, all other clients
         // need to be terminated to allow the delete to succeed.
@@ -423,7 +396,7 @@ export class FirestoreClient {
       // PORTING NOTE: LocalStore does not need an explicit shutdown on web.
       this.gcScheduler.stop();
       await this.remoteStore.shutdown();
-      await this.sharedClientState.shutdown();
+      //await this.sharedClientState.shutdown();
       await this.persistence.shutdown();
 
       // `removeChangeListener` must be called after shutting down the

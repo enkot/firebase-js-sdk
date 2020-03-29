@@ -60,6 +60,9 @@ import {
   SharedClientState
 } from './shared_client_state';
 import { TargetData } from './target_data';
+import { LocalStore } from './local_store';
+import { RemoteStore } from '../remote/remote_store';
+import { SyncEngine } from '../core/sync_engine';
 
 const LOG_TAG = 'MemoryPersistence';
 
@@ -541,14 +544,24 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
     );
   }
 
-  getSharedClientState(): SharedClientState {
-    return new MemorySharedClientState();
-  }
-
   clearPersistence(): never {
     throw new FirestoreError(
       Code.FAILED_PRECONDITION,
       MEMORY_ONLY_PERSISTENCE_ERROR_MESSAGE
     );
+  }
+
+  getSyncEngine(
+    localStore: LocalStore,
+    remoteStore: RemoteStore,
+    currentUser: User
+  ): Promise<SyncEngine> {
+    const syncEngine = new SyncEngine(
+      localStore,
+      remoteStore,
+      new MemorySharedClientState(),
+      currentUser
+    );
+    return Promise.resolve(syncEngine);
   }
 }

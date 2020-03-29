@@ -26,12 +26,14 @@ import { PersistencePromise } from './persistence_promise';
 import { TargetCache } from './target_cache';
 import { ReferenceSet } from './reference_set';
 import { RemoteDocumentCache } from './remote_document_cache';
-import { ClientId, SharedClientState } from './shared_client_state';
+import { ClientId } from './shared_client_state';
 import { TargetData } from './target_data';
 import { DatabaseInfo } from '../core/database_info';
 import { PersistenceSettings } from '../core/firestore_client';
 import { Platform } from '../platform/platform';
 import { AsyncQueue } from '../util/async_queue';
+import { SyncEngine } from '../core/sync_engine';
+import { RemoteStore } from '../remote/remote_store';
 
 export const PRIMARY_LEASE_LOST_ERROR_MSG =
   'The current tab is not in the required state to perform this operation. ' +
@@ -316,7 +318,11 @@ export interface PersistenceProvider {
 
   getGarbageCollectionScheduler(): GarbageCollectionScheduler;
 
-  getSharedClientState(): SharedClientState;
+  getSyncEngine(
+    localStore: LocalStore,
+    remoteStore: RemoteStore,
+    currentUser: User
+  ): Promise<SyncEngine>;
 
   clearPersistence(databaseId: DatabaseInfo): Promise<void>;
 }
