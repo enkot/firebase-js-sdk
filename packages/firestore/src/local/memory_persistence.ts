@@ -63,6 +63,7 @@ import { TargetData } from './target_data';
 import { LocalStore } from './local_store';
 import { RemoteStore } from '../remote/remote_store';
 import { SyncEngine } from '../core/sync_engine';
+import {IndexFreeQueryEngine} from "./index_free_query_engine";
 
 const LOG_TAG = 'MemoryPersistence';
 
@@ -507,10 +508,14 @@ export class MemoryLruDelegate implements ReferenceDelegate, LruDelegate {
 }
 
 export class MemoryPersistenceProvider implements PersistenceProvider {
-  private clientId: ClientId | undefined;
+  private clientId!: ClientId;
+  private persistence!: MemoryPersistence;
+  private localStore!: LocalStore;
+  private syncEngine!: SyncEngine;
 
-  initialize(
+  async initialize(
     asyncQueue: AsyncQueue,
+    remoteStore: RemoteStore,
     databaseInfo: DatabaseInfo,
     platform: Platform,
     clientId: ClientId,
@@ -524,7 +529,18 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
       );
     }
     this.clientId = clientId;
-    return Promise.resolve();
+    this.persistence =  new MemoryPersistence(
+      this.clientId,
+      p => new MemoryEagerDelegate(p)
+    );
+    this.localStore = new LocalStore(this.persistence, new IndexFreeQueryEngine(), initialUser);
+    
+    this.syncEngine = new SyncEngine(
+      this.localStore,
+      remoteStore,
+      new MemorySharedClientState(),
+      initialUser
+    );
   }
 
   getGarbageCollectionScheduler(): GarbageCollectionScheduler {
@@ -537,11 +553,8 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
   }
 
   getPersistence(): Persistence {
-    assert(!!this.clientId, 'initialize() not called');
-    return new MemoryPersistence(
-      this.clientId,
-      p => new MemoryEagerDelegate(p)
-    );
+    assert(!!this.persistence, 'initialize() not called');
+   return this.persistence;
   }
 
   clearPersistence(): never {
@@ -552,16 +565,12 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
   }
 
   getSyncEngine(
-    localStore: LocalStore,
-    remoteStore: RemoteStore,
-    currentUser: User
-  ): Promise<SyncEngine> {
-    const syncEngine = new SyncEngine(
-      localStore,
-      remoteStore,
-      new MemorySharedClientState(),
-      currentUser
-    );
-    return Promise.resolve(syncEngine);
+  ): SyncEngine {
+    
+    return this.syncEngine;
+  }
+  
+  getLocalStore(): LocalStore {
+    return this.localStore;
   }
 }

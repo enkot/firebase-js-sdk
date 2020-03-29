@@ -86,9 +86,10 @@ import {
 } from './shared_client_state';
 import { TargetData } from './target_data';
 import { SimpleDb, SimpleDbStore, SimpleDbTransaction } from './simple_db';
-import { LocalStore } from './local_store';
+import {LocalStore, MultiTabLocalStore} from './local_store';
 import { RemoteStore } from '../remote/remote_store';
 import { MultiTabSyncEngine, SyncEngine } from '../core/sync_engine';
+import {IndexFreeQueryEngine} from "./index_free_query_engine";
 
 const LOG_TAG = 'IndexedDbPersistence';
 
@@ -1313,9 +1314,12 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
   private persistence?: IndexedDbPersistence;
   private gcScheduler?: GarbageCollectionScheduler;
   private sharedClientState?: SharedClientState;
+  private syncEngine!: MultiTabSyncEngine;
+  private localStore!: MultiTabLocalStore;
 
   async initialize(
     asyncQueue: AsyncQueue,
+    remoteStore: RemoteStore,
     databaseInfo: DatabaseInfo,
     platform: Platform,
     clientId: ClientId,
@@ -1346,12 +1350,12 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
 
     this.sharedClientState = settings.synchronizeTabs
       ? new WebStorageSharedClientState(
-          asyncQueue,
-          platform,
-          persistenceKey,
-          clientId,
-          initialUser
-        )
+        asyncQueue,
+        platform,
+        persistenceKey,
+        clientId,
+        initialUser
+      )
       : new MemorySharedClientState();
 
     this.persistence = await IndexedDbPersistence.createIndexedDbPersistence({
@@ -1368,6 +1372,38 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
     const garbageCollector = this.persistence.referenceDelegate
       .garbageCollector;
     this.gcScheduler = new LruScheduler(garbageCollector, asyncQueue);
+
+    this.localStore = new MultiTabLocalStore(this.persistence, new IndexFreeQueryEngine(), initialUser);
+
+    this.syncEngine = new MultiTabSyncEngine(
+      this.localStore,
+      remoteStore,
+      this.sharedClientState!,
+      initialUser
+    );
+
+    // NOTE: This will immediately call the listener, so we make sure to
+    // set it after localStore / remoteStore are started.
+    await this.persistence!.setPrimaryStateListener(async isPrimary => {
+      await this.syncEngine.applyPrimaryState(isPrimary);
+      if (isPrimary && !this.gcScheduler!.started) {
+        this.gcScheduler!.start(this.localStore);
+      } else if (!isPrimary) {
+        this.gcScheduler!.stop();
+      }
+    });
+
+    const sharedClientStateOnlineStateChangedHandler = (
+      onlineState: OnlineState
+    ): void =>
+      this.syncEngine.applyOnlineStateChange(
+        onlineState,
+        OnlineStateSource.SharedClientState
+      );
+
+    this.sharedClientState!.onlineStateHandler = sharedClientStateOnlineStateChangedHandler;
+
+    await this.sharedClientState!.start();
   }
 
   getPersistence(): Persistence {
@@ -1387,40 +1423,12 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
     return IndexedDbPersistence.clearPersistence(persistenceKey);
   }
 
-  async getSyncEngine(
-    localStore: LocalStore,
-    remoteStore: RemoteStore,
-    currentUser: User
-  ): Promise<SyncEngine> {
-    const syncEngine = new MultiTabSyncEngine(
-      localStore,
-      remoteStore,
-      this.sharedClientState!,
-      currentUser
-    );
+  getSyncEngine(): SyncEngine {
 
-    // NOTE: This will immediately call the listener, so we make sure to
-    // set it after localStore / remoteStore are started.
-    await this.persistence!.setPrimaryStateListener(async isPrimary => {
-      await syncEngine.applyPrimaryState(isPrimary);
-      if (isPrimary && !this.gcScheduler!.started) {
-        this.gcScheduler!.start(localStore);
-      } else if (!isPrimary) {
-        this.gcScheduler!.stop();
-      }
-    });
-
-    const sharedClientStateOnlineStateChangedHandler = (
-      onlineState: OnlineState
-    ): void =>
-      syncEngine.applyOnlineStateChange(
-        onlineState,
-        OnlineStateSource.SharedClientState
-      );
-
-    this.sharedClientState!.onlineStateHandler = sharedClientStateOnlineStateChangedHandler;
-
-    await this.sharedClientState!.start();
-    return syncEngine;
+    return this.syncEngine;
   }
+
+  getLocalStore(): LocalStore {
+  return this.localStore;
+}
 }

@@ -231,6 +231,7 @@ export class FirestoreClient {
     try {
       await persistenceProvider.initialize(
         this.asyncQueue,
+        this.remoteStore,
         this.databaseInfo,
         this.platform,
         this.clientId,
@@ -326,9 +327,7 @@ export class FirestoreClient {
     return this.platform
       .loadConnection(this.databaseInfo)
       .then(async connection => {
-        const queryEngine = new IndexFreeQueryEngine();
-        this.localStore = new LocalStore(this.persistence, queryEngine, user);
-        await this.localStore.start();
+        this.localStore = persistenceProvider.getLocalStore();
         const connectivityMonitor = this.platform.newConnectivityMonitor();
         const serializer = this.platform.newSerializer(
           this.databaseInfo.databaseId
@@ -355,12 +354,10 @@ export class FirestoreClient {
           remoteStoreOnlineStateChangedHandler,
           connectivityMonitor
         );
+        
+        // TODO: RemoteStore will be null
 
-        this.syncEngine = await persistenceProvider.getSyncEngine(
-          this.localStore,
-          this.remoteStore,
-          user
-        );
+        this.syncEngine = persistenceProvider.getSyncEngine();
 
         // Set up wiring between sync engine and other components
         this.remoteStore.syncEngine = this.syncEngine;

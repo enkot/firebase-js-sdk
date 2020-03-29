@@ -153,7 +153,7 @@ export class LocalStore {
   private mutationQueue: MutationQueue;
 
   /** The set of all cached remote documents. */
-  private remoteDocuments: RemoteDocumentCache;
+  protected remoteDocuments: RemoteDocumentCache;
 
   /**
    * The "local" view of all documents (layering mutationQueue on top of
@@ -167,7 +167,7 @@ export class LocalStore {
   private localViewReferences = new ReferenceSet();
 
   /** Maps a target to its `TargetData`. */
-  private targetCache: TargetCache;
+  protected targetCache: TargetCache;
 
   /**
    * Maps a targetID to data about its target.
@@ -175,7 +175,7 @@ export class LocalStore {
    * PORTING NOTE: We are using an immutable data structure on Web to make re-runs
    * of `applyRemoteEvent()` idempotent.
    */
-  private targetDataByTarget = new SortedMap<TargetId, TargetData>(
+  protected targetDataByTarget = new SortedMap<TargetId, TargetData>(
     primitiveComparator
   );
 
@@ -190,11 +190,11 @@ export class LocalStore {
    *
    * PORTING NOTE: This is only used for multi-tab synchronization.
    */
-  private lastDocumentChangeReadTime = SnapshotVersion.MIN;
+  protected lastDocumentChangeReadTime = SnapshotVersion.MIN;
 
   constructor(
     /** Manages our in-memory or durable persistence. */
-    private persistence: Persistence,
+    protected persistence: Persistence,
     private queryEngine: QueryEngine,
     initialUser: User
   ) {
@@ -214,11 +214,6 @@ export class LocalStore {
       this.persistence.getIndexManager()
     );
     this.queryEngine.setLocalDocumentsView(this.localDocuments);
-  }
-
-  /** Starts the LocalStore. */
-  start(): Promise<void> {
-    return this.synchronizeLastDocumentChangeReadTime();
   }
 
   /**
@@ -1046,7 +1041,13 @@ export class LocalStore {
       txn => garbageCollector.collect(txn, this.targetDataByTarget)
     );
   }
+}
 
+export class MultiTabLocalStore extends LocalStore {
+  start () : Promise<void> {
+    return this.synchronizeLastDocumentChangeReadTime();
+  }
+  
   // PORTING NOTE: Multi-tab only.
   getTarget(targetId: TargetId): Promise<Target | null> {
     const cachedTargetData = this.targetDataByTarget.get(targetId);
@@ -1101,7 +1102,6 @@ export class LocalStore {
     );
   }
 }
-
 /**
  * Verifies the error thrown by a LocalStore operation. If a LocalStore
  * operation fails because the primary lease has been taken by another client,

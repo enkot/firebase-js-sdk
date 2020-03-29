@@ -306,7 +306,8 @@ export interface GarbageCollectionScheduler {
  */
 export interface PersistenceProvider {
   initialize(
-    asyncQueue: AsyncQueue,
+    asyncQueue: AsyncQueue,    
+    remoteStore: RemoteStore,
     databaseInfo: DatabaseInfo,
     platform: Platform,
     clientId: ClientId,
@@ -318,11 +319,9 @@ export interface PersistenceProvider {
 
   getGarbageCollectionScheduler(): GarbageCollectionScheduler;
 
-  getSyncEngine(
-    localStore: LocalStore,
-    remoteStore: RemoteStore,
-    currentUser: User
-  ): Promise<SyncEngine>;
+  getSyncEngine(): SyncEngine;
 
   clearPersistence(databaseId: DatabaseInfo): Promise<void>;
+
+  getLocalStore(): LocalStore;
 }

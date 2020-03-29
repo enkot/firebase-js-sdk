@@ -16,7 +16,11 @@
  */
 
 import { User } from '../auth/user';
-import { ignoreIfPrimaryLeaseLoss, LocalStore } from '../local/local_store';
+import {
+  ignoreIfPrimaryLeaseLoss,
+  LocalStore,
+  MultiTabLocalStore
+} from '../local/local_store';
 import { LocalViewChanges } from '../local/local_view_changes';
 import { ReferenceSet } from '../local/reference_set';
 import { TargetData, TargetPurpose } from '../local/target_data';
@@ -864,6 +868,18 @@ export class SyncEngine implements RemoteSyncer {
 
 export class MultiTabSyncEngine extends SyncEngine
   implements SharedClientStateSyncer {
+
+  constructor(
+    protected localStore: MultiTabLocalStore,
+    remoteStore: RemoteStore,
+    // PORTING NOTE: Manages state synchronization in multi-tab environments.
+    sharedClientState: SharedClientState,
+    currentUser: User
+  ) {
+    super(localStore, remoteStore, sharedClientState, currentUser)
+  }
+
+  
   // PORTING NOTE: Multi-tab only.
   private resetLimboDocuments(): void {
     objUtils.forEachNumber(this.limboResolutionsByTarget, targetId => {
