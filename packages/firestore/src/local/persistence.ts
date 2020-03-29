@@ -306,7 +306,7 @@ export interface GarbageCollectionScheduler {
  */
 export interface PersistenceProvider {
   initialize(
-    asyncQueue: AsyncQueue,    
+    asyncQueue: AsyncQueue,
     remoteStore: RemoteStore,
     databaseInfo: DatabaseInfo,
     platform: Platform,

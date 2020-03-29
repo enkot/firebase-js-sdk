@@ -63,7 +63,7 @@ import { TargetData } from './target_data';
 import { LocalStore } from './local_store';
 import { RemoteStore } from '../remote/remote_store';
 import { SyncEngine } from '../core/sync_engine';
-import {IndexFreeQueryEngine} from "./index_free_query_engine";
+import { IndexFreeQueryEngine } from './index_free_query_engine';
 
 const LOG_TAG = 'MemoryPersistence';
 
@@ -529,12 +529,16 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
       );
     }
     this.clientId = clientId;
-    this.persistence =  new MemoryPersistence(
+    this.persistence = new MemoryPersistence(
       this.clientId,
       p => new MemoryEagerDelegate(p)
     );
-    this.localStore = new LocalStore(this.persistence, new IndexFreeQueryEngine(), initialUser);
-    
+    this.localStore = new LocalStore(
+      this.persistence,
+      new IndexFreeQueryEngine(),
+      initialUser
+    );
+
     this.syncEngine = new SyncEngine(
       this.localStore,
       remoteStore,
@@ -554,7 +558,7 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
 
   getPersistence(): Persistence {
     assert(!!this.persistence, 'initialize() not called');
-   return this.persistence;
+    return this.persistence;
   }
 
   clearPersistence(): never {
@@ -564,12 +568,10 @@ export class MemoryPersistenceProvider implements PersistenceProvider {
     );
   }
 
-  getSyncEngine(
-  ): SyncEngine {
-    
+  getSyncEngine(): SyncEngine {
     return this.syncEngine;
   }
-  
+
   getLocalStore(): LocalStore {
     return this.localStore;
   }

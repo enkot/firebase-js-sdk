@@ -354,7 +354,7 @@ export class FirestoreClient {
           remoteStoreOnlineStateChangedHandler,
           connectivityMonitor
         );
-        
+
         // TODO: RemoteStore will be null
 
         this.syncEngine = persistenceProvider.getSyncEngine();

@@ -868,7 +868,6 @@ export class SyncEngine implements RemoteSyncer {
 
 export class MultiTabSyncEngine extends SyncEngine
   implements SharedClientStateSyncer {
-
   constructor(
     protected localStore: MultiTabLocalStore,
     remoteStore: RemoteStore,
@@ -876,10 +875,9 @@ export class MultiTabSyncEngine extends SyncEngine
     sharedClientState: SharedClientState,
     currentUser: User
   ) {
-    super(localStore, remoteStore, sharedClientState, currentUser)
+    super(localStore, remoteStore, sharedClientState, currentUser);
   }
 
-  
   // PORTING NOTE: Multi-tab only.
   private resetLimboDocuments(): void {
     objUtils.forEachNumber(this.limboResolutionsByTarget, targetId => {

@@ -1044,10 +1044,10 @@ export class LocalStore {
 }
 
 export class MultiTabLocalStore extends LocalStore {
-  start () : Promise<void> {
+  start(): Promise<void> {
     return this.synchronizeLastDocumentChangeReadTime();
   }
-  
+
   // PORTING NOTE: Multi-tab only.
   getTarget(targetId: TargetId): Promise<Target | null> {
     const cachedTargetData = this.targetDataByTarget.get(targetId);

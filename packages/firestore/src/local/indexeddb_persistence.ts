@@ -86,10 +86,10 @@ import {
 } from './shared_client_state';
 import { TargetData } from './target_data';
 import { SimpleDb, SimpleDbStore, SimpleDbTransaction } from './simple_db';
-import {LocalStore, MultiTabLocalStore} from './local_store';
+import { LocalStore, MultiTabLocalStore } from './local_store';
 import { RemoteStore } from '../remote/remote_store';
 import { MultiTabSyncEngine, SyncEngine } from '../core/sync_engine';
-import {IndexFreeQueryEngine} from "./index_free_query_engine";
+import { IndexFreeQueryEngine } from './index_free_query_engine';
 
 const LOG_TAG = 'IndexedDbPersistence';
 
@@ -1350,12 +1350,12 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
 
     this.sharedClientState = settings.synchronizeTabs
       ? new WebStorageSharedClientState(
-        asyncQueue,
-        platform,
-        persistenceKey,
-        clientId,
-        initialUser
-      )
+          asyncQueue,
+          platform,
+          persistenceKey,
+          clientId,
+          initialUser
+        )
       : new MemorySharedClientState();
 
     this.persistence = await IndexedDbPersistence.createIndexedDbPersistence({
@@ -1373,7 +1373,11 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
       .garbageCollector;
     this.gcScheduler = new LruScheduler(garbageCollector, asyncQueue);
 
-    this.localStore = new MultiTabLocalStore(this.persistence, new IndexFreeQueryEngine(), initialUser);
+    this.localStore = new MultiTabLocalStore(
+      this.persistence,
+      new IndexFreeQueryEngine(),
+      initialUser
+    );
 
     this.syncEngine = new MultiTabSyncEngine(
       this.localStore,
@@ -1424,11 +1428,10 @@ export class IndexedDbPersistenceProvider implements PersistenceProvider {
   }
 
   getSyncEngine(): SyncEngine {
-
     return this.syncEngine;
   }
 
   getLocalStore(): LocalStore {
-  return this.localStore;
-}
+    return this.localStore;
+  }
 }

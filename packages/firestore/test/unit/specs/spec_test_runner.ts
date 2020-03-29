@@ -45,7 +45,7 @@ import {
   SCHEMA_VERSION,
   SchemaConverter
 } from '../../../src/local/indexeddb_schema';
-import {LocalStore, MultiTabLocalStore} from '../../../src/local/local_store';
+import { LocalStore, MultiTabLocalStore } from '../../../src/local/local_store';
 import { LruParams } from '../../../src/local/lru_garbage_collector';
 import {
   MemoryEagerDelegate,
@@ -472,7 +472,11 @@ abstract class TestRunner {
     );
 
     const queryEngine = new IndexFreeQueryEngine();
-    this.localStore = new MultiTabLocalStore(this.persistence, queryEngine, this.user);
+    this.localStore = new MultiTabLocalStore(
+      this.persistence,
+      queryEngine,
+      this.user
+    );
     await this.localStore.start();
 
     this.connection = new MockConnection(this.queue);
