@@ -125,25 +125,6 @@ const es2017BuildPlugins = [
 ];
 
 const browserBuilds = [
-  // ES5 ESM Build (with persistence)
-  {
-    input: 'index.ts',
-    output: { file: pkg.module, format: 'es', sourcemap: true },
-    plugins: es5BuildPlugins,
-    external: resolveBrowserExterns
-  },
-  // ES5 ESM Build (memory-only)
-  {
-    input: 'index.memory.ts',
-    output: {
-      file: path.resolve('./memory', memoryPkg.module),
-      format: 'es',
-      sourcemap: true
-    },
-    plugins: es5BuildPlugins,
-    external: (id, referencedBy) =>
-      resolveMemoryExterns(browserDeps, id, referencedBy)
-  },
   // ES2017 ESM build (with persistence)
   {
     input: 'index.ts',
@@ -167,12 +148,28 @@ const browserBuilds = [
     external: (id, referencedBy) =>
       resolveMemoryExterns(browserDeps, id, referencedBy)
   },
+  // ES5 ESM Build (with persistence)
+  {
+    input: pkg.esm2017,
+    output: { file: pkg.module, format: 'es', sourcemap: true },
+    plugins: [sourcemaps()]
+  },
+  // ES5 ESM Build (memory-only)
+  {
+    input: memoryPkg.esm2017,
+    output: {
+      file: path.resolve('./memory', memoryPkg.module),
+      format: 'es',
+      sourcemap: true
+    },
+    plugins: [sourcemaps()]
+  },
   // ES5 CJS Build (with persistence)
   //
   // This build is based on the mangling in the ESM build above, since
   // Terser's Property name mangling doesn't work well with CJS's syntax.
   {
-    input: pkg.module,
+    input: pkg.esm2017,
     output: { file: pkg.browser, format: 'cjs', sourcemap: true },
     plugins: [sourcemaps()]
   },
@@ -181,7 +178,7 @@ const browserBuilds = [
   // This build is based on the mangling in the ESM build above, since
   // Terser's Property name mangling doesn't work well with CJS's syntax.
   {
-    input: path.resolve('./memory', memoryPkg.module),
+    input: path.resolve('./memory', memoryPkg.esm2017),
     output: {
       file: path.resolve('./memory', memoryPkg.browser),
       format: 'cjs',

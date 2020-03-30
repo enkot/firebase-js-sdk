@@ -29,7 +29,7 @@ import { Document, MaybeDocument } from '../model/document';
 import { DocumentKey } from '../model/document_key';
 
 import { SnapshotVersion } from '../core/snapshot_version';
-import { assert } from '../util/assert';
+import {assert, fail} from '../util/assert';
 import { SortedMap } from '../util/sorted_map';
 import { IndexManager } from './index_manager';
 import { PersistenceTransaction } from './persistence';
@@ -183,7 +183,7 @@ export class MemoryRemoteDocumentCache implements RemoteDocumentCache {
     changedDocs: MaybeDocumentMap;
     readTime: SnapshotVersion;
   }> {
-    throw new Error(
+    throw fail(
       'getNewDocumentChanges() is not supported with MemoryPersistence'
     );
   }
