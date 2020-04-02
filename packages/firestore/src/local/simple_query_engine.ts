@@ -18,7 +18,7 @@
 import { SnapshotVersion } from '../core/snapshot_version';
 import { Query } from '../core/query';
 import { DocumentKeySet, DocumentMap } from '../model/collections';
-import { assert } from '../util/assert';
+import { softAssert } from '../util/assert';
 import { LocalDocumentsView } from './local_documents_view';
 import { QueryEngine } from './query_engine';
 import { PersistenceTransaction } from './persistence';
@@ -42,7 +42,7 @@ export class SimpleQueryEngine implements QueryEngine {
     lastLimboFreeSnapshotVersion: SnapshotVersion,
     remoteKeys: DocumentKeySet
   ): PersistencePromise<DocumentMap> {
-    assert(
+    softAssert(
       this.localDocumentsView !== undefined,
       'setLocalDocumentsView() not called'
     );

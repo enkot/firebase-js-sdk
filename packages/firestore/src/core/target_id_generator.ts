@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { assert } from '../util/assert';
+import { softAssert } from '../util/assert';
 import { TargetId } from './types';
 
 const RESERVED_BITS = 1;
@@ -50,7 +50,7 @@ export class TargetIdGenerator {
    * will use the seed value as the next target ID.
    */
   constructor(private generatorId: number, seed?: number) {
-    assert(
+    softAssert(
       (generatorId & RESERVED_BITS) === generatorId,
       `Generator ID ${generatorId} contains more than ${RESERVED_BITS} reserved bits`
     );
@@ -74,7 +74,7 @@ export class TargetIdGenerator {
   }
 
   private seek(targetId: TargetId): void {
-    assert(
+    softAssert(
       (targetId & RESERVED_BITS) === this.generatorId,
       'Cannot supply target ID from different generator ID'
     );

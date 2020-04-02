@@ -18,7 +18,7 @@
 import { ExclusiveTestFunction, PendingTestFunction } from 'mocha';
 
 import { IndexedDbPersistence } from '../../../src/local/indexeddb_persistence';
-import { assert } from '../../../src/util/assert';
+import { softAssert } from '../../../src/util/assert';
 import { addEqualityMatcher } from '../../util/equality_matcher';
 
 import { SpecBuilder } from './spec_builder';
@@ -157,11 +157,11 @@ export function specTest(
   } else {
     builder = commentOrBuilder;
   }
-  assert(!!builder, 'Missing spec builder');
+  softAssert(!!builder, 'Missing spec builder');
   // Union in the tags for the describeSpec().
   tags = tags.concat(describeTags);
   for (const tag of tags) {
-    assert(
+    softAssert(
       KNOWN_TAGS.indexOf(tag) >= 0,
       'Unknown tag "' + tag + '" on test: ' + name
     );
@@ -192,7 +192,7 @@ export function specTest(
       }
     }
   } else {
-    assert(
+    softAssert(
       tags.indexOf(EXCLUSIVE_TAG) === -1,
       `The 'exclusive' tag is only supported for development and should not be exported to ` +
         `other platforms.`
